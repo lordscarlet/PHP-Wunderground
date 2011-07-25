@@ -13,6 +13,8 @@
 * @license http://opensource.org/licenses/gpl-license.php GNU Public License
 */
 class Wunderground {
+	var $id = "KDCWASHI18";
+
 	/**
 	* The longitude of the area we are querying
 	* @var float
@@ -92,6 +94,56 @@ class Wunderground {
 		}
 	}
 
+	function get_history($span, $date, $force = FALSE) {
+		$history = array();
+		// $header = array();
+		$req = "http://www.wunderground.com/weatherstation/WXDailyHistory.asp?ID={$this->id}&graphspan={$span}&month={$date['mon']}&day={$date['mday']}&year={$date['year']}&format=1";
+
+		if ($this->cache_dir && !$force) {
+			$cfile = "{$this->cache_dir}/WU-{$this->id}-{$span}-{$date['year']}-{$date['mon']}-{$date['mday']}.csv";
+
+			// Tidy cache
+			$expiry = mktime() + $this->cache_expiry;
+			foreach (glob("{$this->cache_dir}/*.csv") as $file)
+				if (filectime($file) > $expiry)
+					unlink($file);
+
+			if (!file_exists($cfile)) {
+				$blob = file_get_contents($req);
+				if (!$blob) die("Invalid return from request to $req");
+				$fh = fopen($cfile, 'w');
+				fwrite($fh, $blob);
+				fclose($fh);
+			}
+
+			if (($handle = fopen($cfile, "r")) !== FALSE) {
+				ini_set("auto_detect_line_endings", 1); 
+				$current_row = 1;
+				while (($data = fgetcsv($handle, 10000, ",")) !== FALSE) {
+					$num = count($data);
+					if ($num > 1) {						
+						$row = array();
+						if ($current_row == 1) {
+							$header = $data;
+						} else {
+							for ($c=0; $c < $num; $c++) {
+								$row[$header[$c]] = $data[$c];
+							}
+							$history[strtotime($row[($span != 'day' ? 'Date' : 'Time')])] = $row;
+						}
+						$current_row++;
+					}
+				}
+				fclose($handle);
+			}
+			return $history;
+
+		}		
+
+		return $history;
+	}
+
+
 	/**
 	* Get the forecast of a specific date
 	* The date will be rounded backwards to the beginning of the given hour
@@ -135,5 +187,6 @@ class Wunderground {
 		} while ($epoc < $end);
 		return $forecast;
 	}
+
 }
 ?>
