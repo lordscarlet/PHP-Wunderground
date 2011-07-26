@@ -97,10 +97,12 @@ class Wunderground {
 	function get_history($span, $date, $force = FALSE) {
 		$history = array();
 		// $header = array();
-		$req = "http://www.wunderground.com/weatherstation/WXDailyHistory.asp?ID={$this->id}&graphspan={$span}&month={$date['mon']}&day={$date['mday']}&year={$date['year']}&format=1";
+		$req = "http://www.wunderground.com/weatherstation/WXDailyHistory.asp?ID={$this->id}&graphspan={$span}&month=" . date("m", $date) . "&day=" . date("d", $date) . "&year=" . date("Y", $date) . "&format=1";
+
+		echo "[" . date('m', $date) . "]";
 
 		if ($this->cache_dir && !$force) {
-			$cfile = "{$this->cache_dir}/WU-{$this->id}-{$span}-{$date['year']}-{$date['mon']}-{$date['mday']}.csv";
+			$cfile = "{$this->cache_dir}/WU-{$this->id}-{$span}-" . date("Y", $date) . "-" . date("m", $date) . "-" . date("d", $date) . ".csv";
 
 			// Tidy cache
 			$expiry = mktime() + $this->cache_expiry;
