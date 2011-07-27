@@ -94,13 +94,36 @@ class Wunderground {
 		}
 	}
 
+	function get_history_data($span, $date, $force = FALSE) {
+		$req = "http://www.wunderground.com/weatherstation/WXDailyHistory.asp?ID={$this->id}&graphspan={$span}&month=" . date("m", $date) . "&day=" . date("d", $date) . "&year=" . date("Y", $date) . "&format=1";
+
+		
+		if ($this->cache_dir && !$force) {
+			$cfile = "{$this->cache_dir}/WU-{$this->id}-{$span}-" . date("Y", $date) . "-" . date("m", $date) . "-" . date("d", $date) . ".csv";
+
+			// Tidy cache
+			$expiry = mktime() + $this->cache_expiry;
+			foreach (glob("{$this->cache_dir}/*.csv") as $file)
+				if (filectime($file) > $expiry)
+					unlink($file);
+
+			if (!file_exists($cfile)) {
+				$blob = file_get_contents($req);
+				if (!$blob) die("Invalid return from request to $req");
+				$blob = preg_replace('/^\n+|^[\t\s]*\n+/m','', str_replace("<br>", "", $blob));
+				$fh = fopen($cfile, 'w');
+				fwrite($fh, $blob);
+				fclose($fh);
+			}
+		}
+	}
+
 	function get_history($span, $date, $force = FALSE) {
 		$history = array();
 		// $header = array();
 		$req = "http://www.wunderground.com/weatherstation/WXDailyHistory.asp?ID={$this->id}&graphspan={$span}&month=" . date("m", $date) . "&day=" . date("d", $date) . "&year=" . date("Y", $date) . "&format=1";
 
-		echo "[" . date('m', $date) . "]";
-
+		
 		if ($this->cache_dir && !$force) {
 			$cfile = "{$this->cache_dir}/WU-{$this->id}-{$span}-" . date("Y", $date) . "-" . date("m", $date) . "-" . date("d", $date) . ".csv";
 
